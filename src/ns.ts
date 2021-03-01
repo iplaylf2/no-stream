@@ -71,16 +71,17 @@ export class NS<T> {
       | { [Symbol.iterator](): IterableIterator<T> }
       | (() => IterableIterator<T>)
   ): NS<T> {
-    const source = iter instanceof Function ? iter : iter[Symbol.iterator];
-    return new NS((next) => [next], source);
+    const source =
+      iter instanceof Function ? iter : () => iter[Symbol.iterator]();
+    return new NS((x) => [x], source);
   }
 
   static concat<T>(...nss: NS<T>[]): NS<T> {
-    return null as any;
+    return nss as any;
   }
 
   static zip<T extends NS<any>[]>(...nss: [...T]): NS<Zip<T>> {
-    return null as any;
+    return nss as any;
   }
 
   constructor(
@@ -139,6 +140,14 @@ export class NS<T> {
 
   groupBy<Key, K>(f: Group<T, Key>, gr: GroupByReduce<T, Key, K>): NS<K> {
     return new NS(conj(this.tf, groupBy(f, gr)), this.iter);
+  }
+
+  cache(): NS<T> {
+    const cache = this.toArray();
+    return new NS(
+      (x) => [x],
+      () => cache[Symbol.iterator]()
+    );
   }
 
   // reduce
