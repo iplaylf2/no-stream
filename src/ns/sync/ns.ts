@@ -55,6 +55,16 @@ interface Action<T> {
   (x: T): any;
 }
 
+type Zip<T extends NS<any>[]> = T extends [infer A, ...infer Rest]
+  ? A extends NS<infer Item>
+    ? Rest extends NS<any>[]
+      ? Rest[0] extends NS<any>
+        ? [Item, ...Zip<Rest>]
+        : [Item]
+      : never
+    : never
+  : never;
+
 export class NS<T> {
   static create<T>(
     iter:
@@ -63,6 +73,14 @@ export class NS<T> {
   ): NS<T> {
     const source = iter instanceof Function ? iter : iter[Symbol.iterator];
     return new NS((next) => [next], source);
+  }
+
+  static concat<T>(...nss: NS<T>[]): NS<T> {
+    return null as any;
+  }
+
+  static zip<T extends NS<any>[]>(...nss: [...T]): NS<Zip<T>> {
+    return null as any;
   }
 
   constructor(
