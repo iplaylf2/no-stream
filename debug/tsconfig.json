@@ -1,0 +1,30 @@
+{
+  //File Inclusion
+  //Compiler Options
+  "compilerOptions": {
+    //Project Options
+    "declaration": true,
+    "lib": ["ESNext", "DOM"],
+    "module": "CommonJS",
+    "outDir": "output",
+    "sourceMap": true,
+    "target": "ESNext",
+    //Strict Checks
+    "alwaysStrict": true,
+    "noImplicitAny": true,
+    "noImplicitThis": true,
+    "strict": true,
+    "strictBindCallApply": true,
+    "strictFunctionTypes": true,
+    "strictNullChecks": true,
+    "strictPropertyInitialization": true,
+    //Module Resolution
+    "allowSyntheticDefaultImports": true,
+    //Linter Checks
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitReturns": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false
+    //Advanced
+  }
+}
