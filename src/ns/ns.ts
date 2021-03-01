@@ -26,6 +26,7 @@ import {
   TransduceFunction,
   TransduceHandler,
 } from "each-once/transduce/sync/type";
+import { NSR } from "./nsr";
 
 interface Map<T, K> {
   (x: T): K;
