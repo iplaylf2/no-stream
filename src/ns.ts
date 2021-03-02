@@ -55,16 +55,6 @@ interface Action<T> {
   (x: T): any;
 }
 
-type Zip<T extends NS<any>[]> = T extends [infer A, ...infer Rest]
-  ? A extends NS<infer Item>
-    ? Rest extends NS<any>[]
-      ? Rest[0] extends NS<any>
-        ? [Item, ...Zip<Rest>]
-        : [Item]
-      : never
-    : never
-  : never;
-
 export class NS<T> {
   static create<T>(
     iter:
@@ -76,12 +66,8 @@ export class NS<T> {
     return new NS((x) => [x], source);
   }
 
-  static concat<T>(...nss: NS<T>[]): NS<T> {
-    return nss as any;
-  }
-
-  static zip<T extends NS<any>[]>(...nss: [...T]): NS<Zip<T>> {
-    return nss as any;
+  static concat<T>(ns: NS<T>, ...nss: NS<T>[]): NS<T> {
+    return ns.concat(...nss);
   }
 
   constructor(
@@ -186,6 +172,15 @@ export class NS<T> {
 
   toArray(): T[] {
     return toArray(this.tf)(this.iter());
+  }
+
+  // sp
+
+  concat(...nss: NS<T>[]): NS<T> {
+    return new NS(
+      (next) => [next, () => nss.every((ns) => ns.every(next))],
+      this.iter
+    );
   }
 
   private tf: TransduceFunction<any, T>;

@@ -10,7 +10,6 @@ export function ns<T>(
 }
 
 ns.concat = NS.concat;
-ns.zip = NS.zip;
 
 export function nsr<T>() {
   return NSR.create<T>();
