@@ -85,7 +85,7 @@ export class ANS<T> {
     return ans.concat(...anss);
   }
 
-  static zip<T extends ANS<any>[]>(...anss: [...T]): Zip<T> {
+  static zip<T extends ANS<any>[]>(...anss: [...T]): ANS<Zip<T>> {
     if (anss.length === 0) {
       throw "anss.length === 0";
     }
@@ -150,7 +150,7 @@ export class ANS<T> {
 
   static race<T>(...anss: ANS<T>[]): ANS<T> {
     return ANS.create(async function* () {
-      yield [];
+      yield anss;
     }) as any;
   }
 
