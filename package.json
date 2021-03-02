@@ -27,6 +27,7 @@
     "url": "https://github.com/Iplaylf2/no-stream.git"
   },
   "keywords": [
+    "each-once",
     "transduce",
     "collection",
     "stream",
