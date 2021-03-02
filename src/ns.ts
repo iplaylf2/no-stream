@@ -178,7 +178,7 @@ export class NS<T> {
 
   concat(...nss: NS<T>[]): NS<T> {
     return new NS(
-      (next) => [next, () => nss.every((ns) => ns.every(next))],
+      conj(this.tf, (next) => [next, () => nss.every((ns) => ns.every(next))]),
       this.iter
     );
   }
