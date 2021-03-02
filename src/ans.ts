@@ -26,6 +26,7 @@ import {
   AsyncTransduceFunction,
   AsyncTransduceHandler,
 } from "each-once/transduce/async/type";
+import { Signal } from "./tool/block";
 
 interface Map<T, K> {
   (x: T): K | Promise<K>;
@@ -85,11 +86,72 @@ export class ANS<T> {
   }
 
   static zip<T extends ANS<any>[]>(...anss: [...T]): Zip<T> {
-    return null as any;
+    if (anss.length === 0) {
+      throw "anss.length === 0";
+    }
+
+    return ANS.create(async function* () {
+      let result: any[] = [];
+      let continue_ = true;
+      let throw_ = false;
+      let error: any;
+
+      const limit = anss.length;
+      let count = 0;
+
+      const each_signal = new Signal();
+      each_signal.block();
+
+      const yield_signal = new Signal();
+      yield_signal.block();
+
+      anss.forEach(async (ans, i) => {
+        try {
+          await ans.foreach(async (x) => {
+            result[i] = x;
+            count++;
+
+            if (count === limit) {
+              yield_signal.unblock();
+            }
+
+            await each_signal.wait;
+          });
+        } catch (e) {
+          throw_ = true;
+          error = e;
+        } finally {
+          continue_ = false;
+          yield_signal.unblock();
+        }
+      });
+
+      while (true) {
+        await yield_signal.wait;
+
+        if (continue_) {
+          const r = result;
+          result = [];
+
+          yield r;
+
+          count = 0;
+          yield_signal.block();
+          each_signal.unblock();
+          each_signal.block();
+        } else if (throw_) {
+          throw error;
+        } else {
+          return;
+        }
+      }
+    }) as any;
   }
 
   static race<T>(...anss: ANS<T>[]): ANS<T> {
-    return null as any;
+    return ANS.create(async function* () {
+      yield [];
+    }) as any;
   }
 
   constructor(
