@@ -55,6 +55,16 @@ interface Action<T> {
   (x: T): any;
 }
 
+type Zip<T extends ANS<any>[]> = T extends [infer A, ...infer Rest]
+  ? A extends ANS<infer Item>
+    ? Rest extends ANS<any>[]
+      ? Rest[0] extends ANS<any>
+        ? [Item, ...Zip<Rest>]
+        : [Item]
+      : never
+    : never
+  : never;
+
 export class ANS<T> {
   static create<T>(
     iter:
@@ -72,6 +82,14 @@ export class ANS<T> {
 
   static concat<T>(ans: ANS<T>, ...anss: ANS<T>[]): ANS<T> {
     return ans.concat(...anss);
+  }
+
+  static zip<T extends ANS<any>[]>(...anss: [...T]): Zip<T> {
+    return null as any;
+  }
+
+  static race<T>(...anss: ANS<T>[]): ANS<T> {
+    return null as any;
   }
 
   constructor(

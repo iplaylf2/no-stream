@@ -25,7 +25,9 @@ export function ans<T>(
   return ANS.create(iter);
 }
 
-ns.concat = ANS.concat;
+ans.concat = ANS.concat;
+ans.zip = ANS.zip;
+ans.race = ANS.race;
 
 export function ansr<T>() {
   return ANSR.create<T>();
