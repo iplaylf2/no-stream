@@ -159,11 +159,14 @@ export class ANS<T> {
             let count = 0;
             let continue_ = true;
 
+            let p: Promise<boolean>;
             return new Promise((resolve, reject) => {
               anss.forEach(async (ans) => {
                 try {
                   await ans.every(async (x) => {
-                    if (await next(x)) {
+                    p = next(x);
+                    if (await p) {
+                      await p;
                       return continue_;
                     } else {
                       continue_ = false;
