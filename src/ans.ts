@@ -26,6 +26,7 @@ import {
   AsyncTransduceFunction,
   AsyncTransduceHandler,
 } from "each-once/transduce/async/type";
+import { short } from "./tf/async";
 import { Signal } from "./tool/block";
 
 interface Map<T, K> {
@@ -149,9 +150,43 @@ export class ANS<T> {
   }
 
   static race<T>(...anss: ANS<T>[]): ANS<T> {
-    return ANS.create(async function* () {
-      yield anss;
-    }) as any;
+    return new ANS(
+      conj(
+        (next) => [
+          next,
+          async () => {
+            const limit = anss.length;
+            let count = 0;
+            let continue_ = true;
+
+            return new Promise((resolve, reject) => {
+              anss.forEach(async (ans) => {
+                try {
+                  await ans.every(async (x) => {
+                    if (await next(x)) {
+                      return continue_;
+                    } else {
+                      continue_ = false;
+                      return false;
+                    }
+                  });
+                } catch (e) {
+                  continue_ = false;
+                  reject(e);
+                }
+
+                count++;
+                if (count === limit) {
+                  resolve(continue_);
+                }
+              });
+            });
+          },
+        ],
+        short()
+      ),
+      async function* () {}
+    ) as any;
   }
 
   constructor(
