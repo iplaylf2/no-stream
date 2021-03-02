@@ -21,11 +21,9 @@ import {
   take,
   takeWhile,
   toArray,
-} from "each-once";
-import {
   TransduceFunction,
   TransduceHandler,
-} from "each-once/transduce/sync/type";
+} from "each-once";
 
 interface Map<T, K> {
   (x: T): K;

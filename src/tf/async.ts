@@ -1,4 +1,4 @@
-import { AsyncTransduceFunction } from "each-once/transduce/async/type";
+import { AsyncTransduceFunction } from "each-once/async";
 
 export function short<T>(): AsyncTransduceFunction<T, T> {
   return (next) => {

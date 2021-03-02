@@ -12,6 +12,8 @@ import {
   skipWhile,
   take,
   takeWhile,
+  AsyncTransduceFunction,
+  AsyncTransduceHandler,
 } from "each-once/async";
 import {
   count,
@@ -24,10 +26,6 @@ import {
   some,
   toArray,
 } from "each-once/async/transduce";
-import {
-  AsyncTransduceFunction,
-  AsyncTransduceHandler,
-} from "each-once/transduce/async/type";
 
 interface Map<T, K> {
   (x: T): K | Promise<K>;

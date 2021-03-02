@@ -21,11 +21,9 @@ import {
   take,
   takeWhile,
   toArray,
-} from "each-once/async";
-import {
   AsyncTransduceFunction,
   AsyncTransduceHandler,
-} from "each-once/transduce/async/type";
+} from "each-once/async";
 import { short } from "./tf/async";
 import { Signal } from "./tool/block";
 
