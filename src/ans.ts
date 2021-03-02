@@ -159,14 +159,22 @@ export class ANS<T> {
             let count = 0;
             let continue_ = true;
 
+            let buoy = 0;
             let p: Promise<boolean>;
             return new Promise((resolve, reject) => {
               anss.forEach(async (ans) => {
                 try {
                   await ans.every(async (x) => {
+                    buoy++;
                     p = next(x);
-                    if (await p) {
-                      await p;
+                    const c = await p;
+                    buoy--;
+
+                    if (c) {
+                      while (buoy !== 0) {
+                        await p;
+                      }
+
                       return continue_;
                     } else {
                       continue_ = false;
