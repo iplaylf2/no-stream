@@ -257,9 +257,13 @@ export class ANS<T> {
   }
 
   cache(): ANS<T> {
-    const cache = this.toArray();
+    const ns = this;
+    let cache: T[];
     return ANS.create(async function* () {
-      yield* await cache;
+      if (!cache) {
+        cache = await ns.toArray();
+      }
+      yield* cache;
     });
   }
 

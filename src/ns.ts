@@ -127,11 +127,14 @@ export class NS<T> {
   }
 
   cache(): NS<T> {
-    const cache = this.toArray();
-    return new NS(
-      (x) => [x],
-      () => cache[Symbol.iterator]()
-    );
+    const ns = this;
+    let cache: T[];
+    return NS.create(function* () {
+      if (!cache) {
+        cache = ns.toArray();
+      }
+      yield* cache;
+    });
   }
 
   // reduce
