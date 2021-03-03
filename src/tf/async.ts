@@ -6,8 +6,13 @@ export function short<T>(): AsyncTransduceFunction<T, T> {
     return [
       async (x) => {
         if (continue_) {
-          continue_ = await next(x);
-          return continue_;
+          try {
+            continue_ = await next(x);
+            return continue_;
+          } catch (e) {
+            continue_ = false;
+            throw e;
+          }
         } else {
           return false;
         }
