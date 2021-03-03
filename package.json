@@ -15,7 +15,7 @@
   "author": "i-play-lf2",
   "license": "BSD-3-Clause",
   "dependencies": {
-    "each-once": "0.0.4"
+    "each-once": "0.0.5"
   },
   "devDependencies": {
     "gulp": "^4.0.2",

@@ -152,10 +152,13 @@ export class ANS<T> {
       conj(
         (next) => [
           next,
-          async () => {
+          async (continue_) => {
+            if (!continue_) {
+              return false;
+            }
+
             const limit = anss.length;
             let count = 0;
-            let continue_ = true;
 
             let buoy = 0;
             let p: Promise<boolean>;
@@ -311,7 +314,11 @@ export class ANS<T> {
     return new ANS(
       conj(this.tf, (next) => [
         next,
-        async () => {
+        async (continue_) => {
+          if (!continue_) {
+            return false;
+          }
+
           for (const ans of anss) {
             const continue_ = await ans.every(next);
             if (!continue_) {
