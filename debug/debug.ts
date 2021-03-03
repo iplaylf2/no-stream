@@ -4,29 +4,39 @@ function delay(n: number) {
   return new Promise((r) => setTimeout(r, n));
 }
 
+let count = 0;
 ans
-  .race(
-    ans(async function* () {
+  .ob<number>((s) => {
+    (async () => {
       while (true) {
-        await delay(Math.random() * 100);
-        console.log(1 + ":");
-        yield 1;
+        count++;
+
+        const x = Math.random();
+        await delay(x * 50);
+        console.log(x + ":");
+        s.next(x);
+        if (0.95 < x) {
+          if (0.98 < x) {
+            s.error("zzz");
+          } else {
+            s.complete();
+          }
+          return;
+        }
       }
-    }),
-    ans(async function* () {
-      while (true) {
-        await delay(Math.random() * 200);
-        console.log(2 + ":");
-        yield 2;
-      }
-    }),
-    ans(async function* () {
-      while (true) {
-        await delay(Math.random() * 300);
-        console.log(3 + ":");
-        yield 3;
-      }
-    })
-  )
-  .take(30)
-  .foreach(async (x) => (await delay(300), console.log(x)));
+    })();
+    return () => {
+      console.info("uns");
+    };
+  })
+  .take(20)
+  .foreach(async (x) => (await delay(10), console.log(x)))
+  .then(
+    () => {
+      console.info(count);
+    },
+    (x) => {
+      console.error(x);
+      console.info(count);
+    }
+  );
