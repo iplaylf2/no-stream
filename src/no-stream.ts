@@ -25,6 +25,7 @@ export function ans<T>(
   return ANS.create(iter);
 }
 
+ans.ob = ANS.observable;
 ans.concat = ANS.concat;
 ans.zip = ANS.zip;
 ans.race = ANS.race;

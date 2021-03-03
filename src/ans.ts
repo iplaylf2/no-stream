@@ -24,6 +24,7 @@ import {
   AsyncTransduceFunction,
   AsyncTransduceHandler,
 } from "each-once/async";
+import { Subscriber, Unsubscribable } from "./observable/observable";
 import { short } from "./tf/async";
 import { Signal } from "./tool/block";
 
@@ -65,6 +66,12 @@ type Zip<T extends ANS<any>[]> = T extends [infer A, ...infer Rest]
     : never
   : never;
 
+enum ObservableType {
+  Next,
+  Complete,
+  Error,
+}
+
 export class ANS<T> {
   static create<T>(
     iter:
@@ -78,6 +85,65 @@ export class ANS<T> {
             yield* iter;
           };
     return new ANS((x) => [x], source);
+  }
+
+  static observable<T>(
+    subscribe: (subscriber: Subscriber<T>) => void | Unsubscribable
+  ): ANS<T> {
+    return new ANS<[ObservableType, T]>(
+      conj(
+        (next) => [
+          next,
+          (continue_) => {
+            if (!continue_) {
+              return Promise.resolve(false);
+            }
+
+            let unsubscribable: Unsubscribable;
+            const p = new Promise<boolean>((resolve, reject) => {
+              function onfulfilled(continue_: boolean) {
+                if (!continue_) {
+                  resolve(false);
+                }
+              }
+
+              function onrejected(e: any) {
+                reject(e);
+              }
+
+              unsubscribable = subscribe({
+                next(x) {
+                  next([ObservableType.Next, x]).then(onfulfilled, onrejected);
+                },
+                complete() {
+                  next([ObservableType.Complete]).then(onfulfilled, onrejected);
+                },
+                error(e) {
+                  next([ObservableType.Error, e]).then(onfulfilled, onrejected);
+                },
+              }) as Unsubscribable;
+            });
+
+            unsubscribable! && p.finally(unsubscribable);
+
+            return p;
+          },
+        ],
+        short()
+      ),
+      async function* () {}
+    )
+      .takeWhile(([t, x]) => {
+        switch (t) {
+          case ObservableType.Next:
+            return true;
+          case ObservableType.Complete:
+            return false;
+          case ObservableType.Error:
+            throw x;
+        }
+      })
+      .map(([_, x]) => x);
   }
 
   static concat<T>(ans: ANS<T>, ...anss: ANS<T>[]): ANS<T> {
