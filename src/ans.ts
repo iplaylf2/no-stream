@@ -94,39 +94,32 @@ export class ANS<T> {
       conj(
         (next) => [
           next,
-          (continue_) => {
+          async (continue_) => {
             if (!continue_) {
-              return Promise.resolve(false);
+              return false;
             }
 
-            let unsubscribable: Unsubscribable;
-            const p = new Promise<boolean>((resolve, reject) => {
-              function onfulfilled(continue_: boolean) {
-                if (!continue_) {
-                  resolve(false);
-                }
-              }
-
-              function onrejected(e: any) {
-                reject(e);
-              }
-
-              unsubscribable = subscribe({
-                next(x) {
-                  next([ObservableType.Next, x]).then(onfulfilled, onrejected);
-                },
-                complete() {
-                  next([ObservableType.Complete]).then(onfulfilled, onrejected);
-                },
-                error(e) {
-                  next([ObservableType.Error, e]).then(onfulfilled, onrejected);
-                },
-              }) as Unsubscribable;
-            });
-
-            unsubscribable! && p.finally(unsubscribable);
-
-            return p;
+            let unsubscribable: void | Unsubscribable;
+            try {
+              return new Promise((resolve, reject) => {
+                unsubscribable = subscribe({
+                  next(x) {
+                    next([ObservableType.Next, x]).then(
+                      (continue_) => continue_ || resolve(false),
+                      reject
+                    );
+                  },
+                  complete() {
+                    next([ObservableType.Complete]).then(resolve);
+                  },
+                  error(e) {
+                    next([ObservableType.Error, e]).catch(reject);
+                  },
+                });
+              });
+            } finally {
+              unsubscribable! && unsubscribable();
+            }
           },
         ],
         short()
