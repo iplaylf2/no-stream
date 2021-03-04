@@ -25,7 +25,6 @@ import {
   AsyncTransduceHandler,
 } from "each-once/async";
 import { Subscriber, Unsubscribable } from "./observable/observable";
-import { short } from "./tf/async";
 
 interface Map<T, K> {
   (x: T): K | Promise<K>;
@@ -142,67 +141,64 @@ export class ANS<T> {
 
   static race<T>(...anss: ANS<T>[]): ANS<T> {
     return new ANS(
-      conj(
-        (next) => [
-          next,
-          async (continue_) => {
-            if (!continue_) {
-              return false;
-            }
+      (next) => [
+        next,
+        async (continue_) => {
+          if (!continue_) {
+            return false;
+          }
 
-            return new Promise((resolve, reject) => {
-              const limit = anss.length;
-              let count = 0;
-              let buoy = 0;
-              let open = true;
+          return new Promise((resolve, reject) => {
+            const limit = anss.length;
+            let count = 0;
+            let buoy = 0;
+            let open = true;
 
-              let p = Promise.resolve();
+            let p = Promise.resolve();
 
-              anss.every((ans) => {
-                if (!open) {
-                  return false;
-                }
+            anss.every((ans) => {
+              if (!open) {
+                return false;
+              }
 
-                (async () => {
-                  try {
-                    await ans.every(async (x) => {
-                      buoy++;
-                      p = p.then(
-                        () =>
-                          open &&
-                          next(x).then(
-                            (c) => c || ((open = false), resolve(false)),
-                            (e) => ((open = false), reject(e)) as any
-                          )
-                      ) as Promise<void>;
-                      await p;
-                      buoy--;
+              (async () => {
+                try {
+                  await ans.every(async (x) => {
+                    buoy++;
+                    p = p.then(
+                      () =>
+                        open &&
+                        next(x).then(
+                          (c) => c || ((open = false), resolve(false)),
+                          (e) => ((open = false), reject(e)) as any
+                        )
+                    ) as Promise<void>;
+                    await p;
+                    buoy--;
 
-                      if (open) {
-                        while (buoy !== 0) {
-                          await p;
-                        }
+                    if (open) {
+                      while (buoy !== 0) {
+                        await p;
                       }
-
-                      return open;
-                    });
-
-                    count++;
-                    if (count === limit) {
-                      p = p.then(() => resolve(true));
                     }
-                  } catch (e) {
-                    p = p.then(() => ((open = false), reject(e)));
-                  }
-                })();
 
-                return true;
-              });
+                    return open;
+                  });
+
+                  count++;
+                  if (count === limit) {
+                    p = p.then(() => resolve(true));
+                  }
+                } catch (e) {
+                  p = p.then(() => ((open = false), reject(e)));
+                }
+              })();
+
+              return true;
             });
-          },
-        ],
-        short()
-      ),
+          });
+        },
+      ],
       async function* () {}
     ) as any;
   }
