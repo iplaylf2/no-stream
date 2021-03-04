@@ -96,6 +96,7 @@ export class ANS<T> {
             let open = true;
 
             let p = Promise.resolve();
+
             try {
               unsubscribable = subscribe({
                 next(x) {
@@ -111,7 +112,7 @@ export class ANS<T> {
                   );
                 },
                 complete() {
-                  p = p.then(() => ((open = false), resolve(false)));
+                  p = p.then(() => ((open = false), resolve(true)));
                 },
                 error(e) {
                   p = p.then(() => ((open = false), reject(e)));
@@ -153,10 +154,12 @@ export class ANS<T> {
               const limit = anss.length;
               let count = 0;
               let buoy = 0;
+              let open = true;
+
               let p = Promise.resolve();
 
               anss.every((ans) => {
-                if (!continue_) {
+                if (!open) {
                   return false;
                 }
 
@@ -164,31 +167,32 @@ export class ANS<T> {
                   try {
                     await ans.every(async (x) => {
                       buoy++;
-                      p = p.then(() =>
-                        next(x).then(
-                          (c) => c || ((continue_ = false), resolve(false)),
-                          (e) => ((continue_ = false), reject(e))
-                        )
+                      p = p.then(
+                        () =>
+                          open &&
+                          next(x).then(
+                            (c) => c || ((open = false), resolve(false)),
+                            (e) => ((open = false), reject(e)) as any
+                          )
                       ) as Promise<void>;
                       await p;
                       buoy--;
 
-                      if (continue_) {
+                      if (open) {
                         while (buoy !== 0) {
                           await p;
                         }
                       }
 
-                      return continue_;
+                      return open;
                     });
-                  } catch (e) {
-                    continue_ = false;
-                    reject(e);
-                  }
 
-                  count++;
-                  if (count === limit) {
-                    resolve(continue_);
+                    count++;
+                    if (count === limit) {
+                      p = p.then(() => resolve(true));
+                    }
+                  } catch (e) {
+                    p = p.then(() => ((open = false), reject(e)));
                   }
                 })();
 
