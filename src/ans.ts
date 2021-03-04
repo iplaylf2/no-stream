@@ -150,15 +150,10 @@ export class ANS<T> {
             }
 
             return new Promise((resolve, reject) => {
-              function next_catch_handler(e: any) {
-                continue_ = false;
-                reject(e);
-              }
-
               const limit = anss.length;
               let count = 0;
               let buoy = 0;
-              let p: Promise<any>;
+              let p = Promise.resolve();
 
               anss.every((ans) => {
                 if (!continue_) {
@@ -169,7 +164,12 @@ export class ANS<T> {
                   try {
                     await ans.every(async (x) => {
                       buoy++;
-                      p = next(x).catch(next_catch_handler);
+                      p = p.then(() =>
+                        next(x).then(
+                          (c) => c || ((continue_ = false), resolve(false)),
+                          (e) => ((continue_ = false), reject(e))
+                        )
+                      ) as Promise<void>;
                       await p;
                       buoy--;
 
