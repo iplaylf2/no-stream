@@ -26,7 +26,6 @@ import {
 } from "each-once/async";
 import { Subscriber, Unsubscribable } from "./observable/observable";
 import { short } from "./tf/async";
-import { Signal } from "./tool/block";
 
 interface Map<T, K> {
   (x: T): K | Promise<K>;
@@ -99,9 +98,9 @@ export class ANS<T> {
               return false;
             }
 
-            let unsubscribable: void | Unsubscribable;
-            try {
-              return new Promise((resolve, reject) => {
+            let unsubscribable!: void | Unsubscribable;
+            return new Promise<boolean>((resolve, reject) => {
+              try {
                 unsubscribable = subscribe({
                   next(x) {
                     next([ObservableType.Next, x]).then(
@@ -116,10 +115,10 @@ export class ANS<T> {
                     next([ObservableType.Error, e]).catch(reject);
                   },
                 });
-              });
-            } finally {
-              unsubscribable! && unsubscribable();
-            }
+              } catch (e) {
+                next([ObservableType.Error, e]).catch(reject);
+              }
+            }).finally(unsubscribable as Unsubscribable);
           },
         ],
         short()
@@ -148,62 +147,7 @@ export class ANS<T> {
       throw "anss.length === 0";
     }
 
-    return ANS.create(async function* () {
-      let result: any[] = [];
-      let continue_ = true;
-      let throw_ = false;
-      let error: any;
-
-      const limit = anss.length;
-      let count = 0;
-
-      const each_signal = new Signal();
-      each_signal.block();
-
-      const yield_signal = new Signal();
-      yield_signal.block();
-
-      anss.forEach(async (ans, i) => {
-        try {
-          await ans.foreach(async (x) => {
-            result[i] = x;
-            count++;
-
-            if (count === limit) {
-              yield_signal.unblock();
-            }
-
-            await each_signal.wait;
-          });
-        } catch (e) {
-          throw_ = true;
-          error = e;
-        } finally {
-          continue_ = false;
-          yield_signal.unblock();
-        }
-      });
-
-      while (true) {
-        await yield_signal.wait;
-
-        if (continue_) {
-          const r = result;
-          result = [];
-
-          yield r;
-
-          count = 0;
-          yield_signal.block();
-          each_signal.unblock();
-          each_signal.block();
-        } else if (throw_) {
-          throw error;
-        } else {
-          return;
-        }
-      }
-    }) as any;
+    throw "think of dispose";
   }
 
   static race<T>(...anss: ANS<T>[]): ANS<T> {
@@ -216,40 +160,50 @@ export class ANS<T> {
               return false;
             }
 
-            const limit = anss.length;
-            let count = 0;
-
-            let buoy = 0;
-            let p: Promise<boolean>;
             return new Promise((resolve, reject) => {
-              anss.forEach(async (ans) => {
-                try {
-                  await ans.every(async (x) => {
-                    buoy++;
-                    p = next(x);
-                    const c = await p;
-                    buoy--;
+              function next_catch_handler(e: any) {
+                continue_ = false;
+                reject(e);
+              }
 
-                    if (c) {
-                      while (buoy !== 0) {
-                        await p;
+              const limit = anss.length;
+              let count = 0;
+              let buoy = 0;
+              let p: Promise<any>;
+
+              anss.every((ans) => {
+                if (!continue_) {
+                  return false;
+                }
+
+                (async () => {
+                  try {
+                    await ans.every(async (x) => {
+                      buoy++;
+                      p = next(x).catch(next_catch_handler);
+                      await p;
+                      buoy--;
+
+                      if (continue_) {
+                        while (buoy !== 0) {
+                          await p;
+                        }
                       }
 
                       return continue_;
-                    } else {
-                      continue_ = false;
-                      return false;
-                    }
-                  });
-                } catch (e) {
-                  continue_ = false;
-                  reject(e);
-                }
+                    });
+                  } catch (e) {
+                    continue_ = false;
+                    reject(e);
+                  }
 
-                count++;
-                if (count === limit) {
-                  resolve(continue_);
-                }
+                  count++;
+                  if (count === limit) {
+                    resolve(continue_);
+                  }
+                })();
+
+                return true;
               });
             });
           },
