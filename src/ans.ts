@@ -65,12 +65,6 @@ type Zip<T extends ANS<any>[]> = T extends [infer A, ...infer Rest]
     : never
   : never;
 
-enum ObservableType {
-  Next,
-  Complete,
-  Error,
-}
-
 export class ANS<T> {
   static create<T>(
     iter:
