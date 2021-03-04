@@ -187,6 +187,8 @@ export class ANS<T> {
                   p = p.then(() => ((open = false), resolve(true)));
                 } catch (e) {
                   p = p.then(() => ((open = false), reject(e)));
+                } finally {
+                  every_signal.unblock();
                 }
               })();
 
