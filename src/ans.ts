@@ -89,53 +89,48 @@ export class ANS<T> {
   static observable<T>(
     subscribe: (subscriber: Subscriber<T>) => void | Unsubscribable
   ): ANS<T> {
-    return new ANS<[ObservableType, T]>(
-      conj(
-        (next) => [
-          next,
-          async (continue_) => {
-            if (!continue_) {
-              return false;
-            }
-
-            let unsubscribable!: void | Unsubscribable;
-            return new Promise<boolean>((resolve, reject) => {
-              try {
-                unsubscribable = subscribe({
-                  next(x) {
-                    next([ObservableType.Next, x]).then(
-                      (continue_) => continue_ || resolve(false),
-                      reject
-                    );
-                  },
-                  complete() {
-                    next([ObservableType.Complete]).then(resolve);
-                  },
-                  error(e) {
-                    next([ObservableType.Error, e]).catch(reject);
-                  },
-                });
-              } catch (e) {
-                next([ObservableType.Error, e]).catch(reject);
-              }
-            }).finally(unsubscribable as Unsubscribable);
-          },
-        ],
-        short()
-      ),
-      async function* () {}
-    )
-      .takeWhile(([t, x]) => {
-        switch (t) {
-          case ObservableType.Next:
-            return true;
-          case ObservableType.Complete:
+    return new ANS<T>(
+      (next) => [
+        next,
+        async (continue_) => {
+          if (!continue_) {
             return false;
-          case ObservableType.Error:
-            throw x;
-        }
-      })
-      .map(([_, x]) => x);
+          }
+
+          let unsubscribable!: void | Unsubscribable;
+          return new Promise<boolean>((resolve, reject) => {
+            let open = true;
+
+            let p = Promise.resolve();
+            try {
+              unsubscribable = subscribe({
+                next(x) {
+                  p = p.then(
+                    () =>
+                      open &&
+                      next(x).then(
+                        (continue_) =>
+                          continue_ ||
+                          (((open = false), resolve(false)) as any),
+                        (e) => ((open = false), reject(e))
+                      )
+                  );
+                },
+                complete() {
+                  p = p.then(() => ((open = false), resolve(false)));
+                },
+                error(e) {
+                  p = p.then(() => ((open = false), reject(e)));
+                },
+              });
+            } catch (e) {
+              p = p.then(() => ((open = false), reject(e)));
+            }
+          }).finally(unsubscribable as Unsubscribable);
+        },
+      ],
+      async function* () {}
+    );
   }
 
   static concat<T>(ans: ANS<T>, ...anss: ANS<T>[]): ANS<T> {
