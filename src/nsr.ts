@@ -52,7 +52,7 @@ interface ReduceFunction<T, K> {
 }
 
 interface Action<T> {
-  (x: T): any;
+  (x: T): void;
 }
 
 export class NSR<TSource, TResult> {

@@ -52,7 +52,7 @@ interface ReduceFunction<T, K> {
 }
 
 interface Action<T> {
-  (x: T): any;
+  (x: T): void | Promise<void>;
 }
 
 export class ANSR<TSource, TResult> {
