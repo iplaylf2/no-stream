@@ -25,6 +25,7 @@ import {
   AsyncTransduceHandler,
 } from "each-once/async";
 import { Subscriber, Unsubscribable } from "./observable/observable";
+import { Signal } from "./tool/block";
 
 interface Map<T, K> {
   (x: T): K | Promise<K>;
@@ -136,10 +137,73 @@ export class ANS<T> {
       throw "anss.length === 0";
     }
 
-    throw "think of dispose";
+    return new ANS(
+      (next) => [
+        next,
+        async (continue_) => {
+          if (!continue_) {
+            return false;
+          }
+
+          return new Promise((resolve, reject) => {
+            const limit = anss.length;
+            let count = 0;
+            let result: any[] = [];
+            let open = true;
+
+            const every_signal = new Signal();
+            every_signal.block();
+
+            let p = Promise.resolve();
+
+            anss.every((ans, i) => {
+              if (!open) {
+                return false;
+              }
+
+              (async () => {
+                try {
+                  await ans.every(async (x) => {
+                    result[i] = x;
+                    count++;
+
+                    if (count === limit) {
+                      p = next(result as any)
+                        .then(
+                          (continue_) =>
+                            continue_ || ((open = false), resolve(false)),
+                          (e) => ((open = false), reject(e))
+                        )
+                        .finally(
+                          () => (every_signal.unblock(), every_signal.block())
+                        ) as Promise<void>;
+                      count = 0;
+                      result = [];
+                    }
+
+                    await every_signal.wait;
+                    return open;
+                  });
+                  p = p.then(() => ((open = false), resolve(true)));
+                } catch (e) {
+                  p = p.then(() => ((open = false), reject(e)));
+                }
+              })();
+
+              return open;
+            });
+          });
+        },
+      ],
+      async function* () {}
+    );
   }
 
   static race<T>(...anss: ANS<T>[]): ANS<T> {
+    if (anss.length === 0) {
+      throw "anss.length === 0";
+    }
+
     return new ANS(
       (next) => [
         next,
@@ -194,13 +258,13 @@ export class ANS<T> {
                 }
               })();
 
-              return true;
+              return open;
             });
           });
         },
       ],
       async function* () {}
-    ) as any;
+    );
   }
 
   constructor(
