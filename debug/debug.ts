@@ -4,39 +4,51 @@ function delay(n: number) {
   return new Promise((r) => setTimeout(r, n));
 }
 
-let count = 0;
 ans
-  .ob<number>((s) => {
-    (async () => {
+  .zip(
+    ans(async function* () {
       while (true) {
-        count++;
-
         const x = Math.random();
         await delay(x * 50);
-        console.log(x + ":");
-        s.next(x);
-        if (0.95 < x) {
-          if (0.98 < x) {
-            s.error("zzz");
-          } else {
-            s.complete();
-          }
-          return;
+        console.log("1 : " + x);
+        if (0.99 < x) {
+          throw x + "!";
         }
+        yield x;
       }
-    })();
-    return () => {
-      console.info("uns");
-    };
-  })
-  .take(20)
-  .foreach(async (x) => (await delay(10), console.log(x)))
-  .then(
-    () => {
-      console.info(count);
-    },
-    (x) => {
-      console.error(x);
-      console.info(count);
+    }),
+    ans(async function* () {
+      while (true) {
+        const x = Math.random();
+        await delay(x * 50);
+        console.log("2 : " + x);
+        if (0.99 < x) {
+          throw x + "!";
+        }
+        yield x;
+      }
+    }),
+    ans(async function* () {
+      while (true) {
+        const x = Math.random();
+        await delay(x * 50);
+        console.log("3 : " + x);
+        if (0.99 < x) {
+          throw x + "!";
+        }
+        yield x;
+      }
+    })
+  )
+  .take(30)
+  .foreach(async (x) => {
+    console.log(x);
+    await delay(Math.random() * 1);
+    if (0.99 < Math.random()) {
+      throw "!!!";
     }
+  })
+  .then(
+    () => console.info("end"),
+    (e) => console.error(e)
   );
