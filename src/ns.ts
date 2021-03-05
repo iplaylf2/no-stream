@@ -54,6 +54,8 @@ interface Action<T> {
 }
 
 export class NS<T> {
+  // create
+
   static create<T>(
     iter:
       | { [Symbol.iterator](): IterableIterator<T> }
@@ -63,6 +65,8 @@ export class NS<T> {
       iter instanceof Function ? iter : () => iter[Symbol.iterator]();
     return new NS((x) => [x], source);
   }
+
+  // merge
 
   static concat<T>(ns: NS<T>, ...nss: NS<T>[]): NS<T> {
     return ns.concat(...nss);
@@ -175,7 +179,7 @@ export class NS<T> {
     return toArray(this.tf)(this.iter());
   }
 
-  // sp
+  // merge
 
   concat(...nss: NS<T>[]): NS<T> {
     return new NS(

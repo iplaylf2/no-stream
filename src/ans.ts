@@ -66,6 +66,8 @@ type Zip<T extends ANS<any>[]> = T extends [infer A, ...infer Rest]
   : never;
 
 export class ANS<T> {
+  // create
+
   static create<T>(
     iter:
       | { [Symbol.iterator](): IterableIterator<T> }
@@ -127,6 +129,8 @@ export class ANS<T> {
       async function* () {}
     );
   }
+
+  // merge
 
   static concat<T>(ans: ANS<T>, ...anss: ANS<T>[]): ANS<T> {
     return ans.concat(...anss);
@@ -376,7 +380,7 @@ export class ANS<T> {
     return toArray(this.tf)(this.iter());
   }
 
-  // sp
+  // merge
 
   concat(...anss: ANS<T>[]): ANS<T> {
     return new ANS(
