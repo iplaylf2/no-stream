@@ -1,6 +1,6 @@
 {
   "name": "no-stream",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Like stream, but no stream.",
   "main": "./no-stream.js",
   "types": "./no-stream.d.ts",
