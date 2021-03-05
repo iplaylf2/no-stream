@@ -20,7 +20,7 @@ ans
     ans(async function* () {
       while (true) {
         const x = Math.random();
-        await delay(x * 50);
+        await delay(x * 100);
         console.log("2 : " + x);
         if (0.99 < x) {
           throw x + "!";
@@ -31,7 +31,7 @@ ans
     ans(async function* () {
       while (true) {
         const x = Math.random();
-        await delay(x * 50);
+        await delay(x * 150);
         console.log("3 : " + x);
         if (0.99 < x) {
           throw x + "!";
@@ -43,7 +43,7 @@ ans
   .take(30)
   .foreach(async (x) => {
     console.log(x);
-    await delay(Math.random() * 1);
+    await delay(Math.random() * 50);
     if (0.99 < Math.random()) {
       throw "!!!";
     }
