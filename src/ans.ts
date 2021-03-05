@@ -24,7 +24,7 @@ import {
   AsyncTransduceFunction,
   AsyncTransduceHandler,
 } from "each-once/async";
-import { short } from "./tf/async";
+import { Subscriber, Unsubscribable } from "./observable/observable";
 import { Signal } from "./tool/block";
 
 interface Map<T, K> {
@@ -52,7 +52,7 @@ interface ReduceFunction<T, K> {
 }
 
 interface Action<T> {
-  (x: T): any;
+  (x: T): void | Promise<void>;
 }
 
 type Zip<T extends ANS<any>[]> = T extends [infer A, ...infer Rest]
@@ -80,6 +80,54 @@ export class ANS<T> {
     return new ANS((x) => [x], source);
   }
 
+  static observable<T>(
+    subscribe: (subscriber: Subscriber<T>) => void | Unsubscribable
+  ): ANS<T> {
+    return new ANS<T>(
+      (next) => [
+        next,
+        async (continue_) => {
+          if (!continue_) {
+            return false;
+          }
+
+          let unsubscribable!: void | Unsubscribable;
+          return new Promise<boolean>((resolve, reject) => {
+            let open = true;
+
+            let p = Promise.resolve();
+
+            try {
+              unsubscribable = subscribe({
+                next(x) {
+                  p = p.then(
+                    () =>
+                      open &&
+                      next(x).then(
+                        (continue_) =>
+                          continue_ ||
+                          (((open = false), resolve(false)) as any),
+                        (e) => ((open = false), reject(e))
+                      )
+                  );
+                },
+                complete() {
+                  p.then(() => ((open = false), resolve(true)));
+                },
+                error(e) {
+                  p.then(() => ((open = false), reject(e)));
+                },
+              });
+            } catch (e) {
+              p.then(() => ((open = false), reject(e)));
+            }
+          }).finally(unsubscribable as Unsubscribable);
+        },
+      ],
+      async function* () {}
+    );
+  }
+
   static concat<T>(ans: ANS<T>, ...anss: ANS<T>[]): ANS<T> {
     return ans.concat(...anss);
   }
@@ -89,113 +137,136 @@ export class ANS<T> {
       throw "anss.length === 0";
     }
 
-    return ANS.create(async function* () {
-      let result: any[] = [];
-      let continue_ = true;
-      let throw_ = false;
-      let error: any;
+    return new ANS(
+      (next) => [
+        next,
+        async (continue_) => {
+          if (!continue_) {
+            return false;
+          }
 
-      const limit = anss.length;
-      let count = 0;
+          return new Promise((resolve, reject) => {
+            const limit = anss.length;
+            let count = 0;
+            let result: any[] = [];
+            let open = true;
 
-      const each_signal = new Signal();
-      each_signal.block();
+            const every_signal = new Signal();
+            every_signal.block();
 
-      const yield_signal = new Signal();
-      yield_signal.block();
+            let p = Promise.resolve();
 
-      anss.forEach(async (ans, i) => {
-        try {
-          await ans.foreach(async (x) => {
-            result[i] = x;
-            count++;
+            anss.every((ans, i) => {
+              if (!open) {
+                return false;
+              }
 
-            if (count === limit) {
-              yield_signal.unblock();
-            }
+              (async () => {
+                try {
+                  await ans.every(async (x) => {
+                    result[i] = x;
+                    count++;
 
-            await each_signal.wait;
+                    if (count === limit) {
+                      p = next(result as any)
+                        .then(
+                          (continue_) =>
+                            continue_ || ((open = false), resolve(false)),
+                          (e) => ((open = false), reject(e))
+                        )
+                        .finally(
+                          () => (every_signal.unblock(), every_signal.block())
+                        ) as Promise<void>;
+                      count = 0;
+                      result = [];
+                    }
+
+                    await every_signal.wait;
+                    return open;
+                  });
+                  await p.then(() => ((open = false), resolve(true)));
+                } catch (e) {
+                  await p.then(() => ((open = false), reject(e)));
+                } finally {
+                  every_signal.unblock();
+                }
+              })();
+
+              return open;
+            });
           });
-        } catch (e) {
-          throw_ = true;
-          error = e;
-        } finally {
-          continue_ = false;
-          yield_signal.unblock();
-        }
-      });
-
-      while (true) {
-        await yield_signal.wait;
-
-        if (continue_) {
-          const r = result;
-          result = [];
-
-          yield r;
-
-          count = 0;
-          yield_signal.block();
-          each_signal.unblock();
-          each_signal.block();
-        } else if (throw_) {
-          throw error;
-        } else {
-          return;
-        }
-      }
-    }) as any;
+        },
+      ],
+      async function* () {}
+    );
   }
 
   static race<T>(...anss: ANS<T>[]): ANS<T> {
+    if (anss.length === 0) {
+      throw "anss.length === 0";
+    }
+
     return new ANS(
-      conj(
-        (next) => [
-          next,
-          async () => {
+      (next) => [
+        next,
+        async (continue_) => {
+          if (!continue_) {
+            return false;
+          }
+
+          return new Promise((resolve, reject) => {
             const limit = anss.length;
             let count = 0;
-            let continue_ = true;
-
             let buoy = 0;
-            let p: Promise<boolean>;
-            return new Promise((resolve, reject) => {
-              anss.forEach(async (ans) => {
+            let open = true;
+
+            let p = Promise.resolve();
+
+            anss.every((ans) => {
+              if (!open) {
+                return false;
+              }
+
+              (async () => {
                 try {
                   await ans.every(async (x) => {
                     buoy++;
-                    p = next(x);
-                    const c = await p;
+                    p = p.then(
+                      () =>
+                        open &&
+                        next(x).then(
+                          (c) => c || ((open = false), resolve(false)),
+                          (e) => ((open = false), reject(e)) as any
+                        )
+                    ) as Promise<void>;
+                    await p;
                     buoy--;
 
-                    if (c) {
+                    if (open) {
                       while (buoy !== 0) {
                         await p;
                       }
-
-                      return continue_;
-                    } else {
-                      continue_ = false;
-                      return false;
                     }
-                  });
-                } catch (e) {
-                  continue_ = false;
-                  reject(e);
-                }
 
-                count++;
-                if (count === limit) {
-                  resolve(continue_);
+                    return open;
+                  });
+
+                  count++;
+                  if (count === limit) {
+                    p.then(() => resolve(true));
+                  }
+                } catch (e) {
+                  p.then(() => ((open = false), reject(e)));
                 }
-              });
+              })();
+
+              return open;
             });
-          },
-        ],
-        short()
-      ),
+          });
+        },
+      ],
       async function* () {}
-    ) as any;
+    );
   }
 
   constructor(
@@ -257,9 +328,13 @@ export class ANS<T> {
   }
 
   cache(): ANS<T> {
-    const cache = this.toArray();
+    const ns = this;
+    let cache: T[];
     return ANS.create(async function* () {
-      yield* await cache;
+      if (!cache) {
+        cache = await ns.toArray();
+      }
+      yield* cache;
     });
   }
 
@@ -307,7 +382,11 @@ export class ANS<T> {
     return new ANS(
       conj(this.tf, (next) => [
         next,
-        async () => {
+        async (continue_) => {
+          if (!continue_) {
+            return false;
+          }
+
           for (const ans of anss) {
             const continue_ = await ans.every(next);
             if (!continue_) {

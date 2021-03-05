@@ -50,7 +50,7 @@ interface ReduceFunction<T, K> {
 }
 
 interface Action<T> {
-  (x: T): any;
+  (x: T): void;
 }
 
 export class NS<T> {
@@ -127,11 +127,14 @@ export class NS<T> {
   }
 
   cache(): NS<T> {
-    const cache = this.toArray();
-    return new NS(
-      (x) => [x],
-      () => cache[Symbol.iterator]()
-    );
+    const ns = this;
+    let cache: T[];
+    return NS.create(function* () {
+      if (!cache) {
+        cache = ns.toArray();
+      }
+      yield* cache;
+    });
   }
 
   // reduce
@@ -176,7 +179,10 @@ export class NS<T> {
 
   concat(...nss: NS<T>[]): NS<T> {
     return new NS(
-      conj(this.tf, (next) => [next, () => nss.every((ns) => ns.every(next))]),
+      conj(this.tf, (next) => [
+        next,
+        (continue_) => continue_ && nss.every((ns) => ns.every(next)),
+      ]),
       this.iter
     );
   }

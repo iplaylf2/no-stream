@@ -1,6 +1,6 @@
 {
   "name": "no-stream",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Like stream, but no stream.",
   "main": "./no-stream.js",
   "types": "./no-stream.d.ts",
@@ -15,7 +15,7 @@
   "author": "i-play-lf2",
   "license": "BSD-3-Clause",
   "dependencies": {
-    "each-once": "0.0.4"
+    "each-once": "0.0.6"
   },
   "devDependencies": {
     "gulp": "^4.0.2",

@@ -5,28 +5,50 @@ function delay(n: number) {
 }
 
 ans
-  .race(
+  .zip(
     ans(async function* () {
       while (true) {
-        await delay(Math.random() * 100);
-        console.log(1 + ":");
-        yield 1;
+        const x = Math.random();
+        await delay(x * 50);
+        console.log("1 : " + x);
+        if (0.99 < x) {
+          throw x + "!";
+        }
+        yield x;
       }
     }),
     ans(async function* () {
       while (true) {
-        await delay(Math.random() * 200);
-        console.log(2 + ":");
-        yield 2;
+        const x = Math.random();
+        await delay(x * 100);
+        console.log("2 : " + x);
+        if (0.99 < x) {
+          throw x + "!";
+        }
+        yield x;
       }
     }),
     ans(async function* () {
       while (true) {
-        await delay(Math.random() * 300);
-        console.log(3 + ":");
-        yield 3;
+        const x = Math.random();
+        await delay(x * 150);
+        console.log("3 : " + x);
+        if (0.99 < x) {
+          throw x + "!";
+        }
+        yield x;
       }
     })
   )
   .take(30)
-  .foreach(async (x) => (await delay(300), console.log(x)));
+  .foreach(async (x) => {
+    console.log(x);
+    await delay(Math.random() * 50);
+    if (0.99 < Math.random()) {
+      throw "!!!";
+    }
+  })
+  .then(
+    () => console.info("end"),
+    (e) => console.error(e)
+  );
