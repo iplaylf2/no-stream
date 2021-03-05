@@ -112,14 +112,14 @@ export class ANS<T> {
                   );
                 },
                 complete() {
-                  p = p.then(() => ((open = false), resolve(true)));
+                  p.then(() => ((open = false), resolve(true)));
                 },
                 error(e) {
-                  p = p.then(() => ((open = false), reject(e)));
+                  p.then(() => ((open = false), reject(e)));
                 },
               });
             } catch (e) {
-              p = p.then(() => ((open = false), reject(e)));
+              p.then(() => ((open = false), reject(e)));
             }
           }).finally(unsubscribable as Unsubscribable);
         },
@@ -184,9 +184,9 @@ export class ANS<T> {
                     await every_signal.wait;
                     return open;
                   });
-                  p = p.then(() => ((open = false), resolve(true)));
+                  await p.then(() => ((open = false), resolve(true)));
                 } catch (e) {
-                  p = p.then(() => ((open = false), reject(e)));
+                  await p.then(() => ((open = false), reject(e)));
                 } finally {
                   every_signal.unblock();
                 }
@@ -253,10 +253,10 @@ export class ANS<T> {
 
                   count++;
                   if (count === limit) {
-                    p = p.then(() => resolve(true));
+                    p.then(() => resolve(true));
                   }
                 } catch (e) {
-                  p = p.then(() => ((open = false), reject(e)));
+                  p.then(() => ((open = false), reject(e)));
                 }
               })();
 
